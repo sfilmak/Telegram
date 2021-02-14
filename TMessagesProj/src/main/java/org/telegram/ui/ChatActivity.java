@@ -668,6 +668,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     //sfilmak changes
     private final HashMap<Integer, Set<Integer>> messagesWithReplies = new HashMap<>();
+    private final HashMap<Integer, Set<MessageObject>> messagesWithReplies_Variant = new HashMap<>();
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -12119,6 +12120,12 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         } else {
                             messagesWithReplies.put(obj.replyMessageObject.getId(), new LinkedHashSet<>(Collections.singletonList(obj.getId())));
                         }
+
+                        if (messagesWithReplies_Variant.containsKey(obj.replyMessageObject.getId())) {
+                            messagesWithReplies_Variant.get(obj.replyMessageObject.getId()).add(obj);
+                        } else {
+                            messagesWithReplies_Variant.put(obj.replyMessageObject.getId(), new LinkedHashSet<>(Collections.singletonList(obj)));
+                        }
                     }
 
                     int messageId = obj.getId();
@@ -13723,6 +13730,18 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
             int loadIndex = did == dialog_id ? 0 : 1;
             ArrayList<MessageObject> messageObjects = (ArrayList<MessageObject>) args[1];
+            ArrayList<MessageObject> messageObjectsCopy = new ArrayList<>(messageObjects);
+
+            for(int z = 0; z < messageObjectsCopy.size(); z++){
+                if(messagesWithReplies_Variant.containsKey(messageObjectsCopy.get(z).getId())) {
+                    MessageObject messageObject = messageObjectsCopy.get(z);
+                    List<MessageObject> valuesList = new ArrayList<>(messagesWithReplies_Variant.get(messageObject.getId()));
+
+                    MessageObject toBeEdited = valuesList.get(z);
+                    toBeEdited.replyMessageObject = messageObject;
+                    messageObjects.add(toBeEdited);
+                }
+            }
 
             replaceMessageObjects(messageObjects, loadIndex, false);
         } else if (id == NotificationCenter.notificationsSettingsUpdated) {
