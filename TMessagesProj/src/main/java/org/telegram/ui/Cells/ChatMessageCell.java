@@ -2023,9 +2023,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             int addX;
             if (currentMessageObject.isOutOwner()) {
-                if(botButtons.size() >= 8) {
+                /*if(botButtons.size() >= 8) {
                     addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(140);
-                } else if(botButtons.size() >= 4) {
+                } else */if(botButtons.size() >= 4) {
                     addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(80);
                 } else {
                     addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(10);
@@ -8265,9 +8265,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private void drawBotButtons(Canvas canvas, ArrayList<BotButton> botButtons, float alpha) {
         int addX;
         if (currentMessageObject.isOutOwner()) {
-            if(botButtons.size() >= 8) {
+            /*if(botButtons.size() >= 8) {
                 addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(140);
-            } else if(botButtons.size() >= 4) {
+            } else */if(botButtons.size() >= 4) {
                 addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(80);
             } else {
                 addX = getMeasuredWidth() - widthForButtons - AndroidUtilities.dp(10);
