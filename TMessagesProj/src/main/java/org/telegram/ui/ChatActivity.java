@@ -1589,6 +1589,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         getNotificationCenter().addObserver(this, NotificationCenter.availableReactionsDidLoad);
         getNotificationCenter().addObserver(this, NotificationCenter.updateAllowedReactions);
 
+        getNotificationCenter().addObserver(this, NotificationCenter.errorHappened);
+
         super.onFragmentCreate();
 
         if (chatMode == MODE_PINNED) {
@@ -1887,6 +1889,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         getNotificationCenter().removeObserver(this, NotificationCenter.didSetReactions);
         getNotificationCenter().removeObserver(this, NotificationCenter.availableReactionsDidLoad);
         getNotificationCenter().removeObserver(this, NotificationCenter.updateAllowedReactions);
+
+        getNotificationCenter().removeObserver(this, NotificationCenter.errorHappened);
         if (currentEncryptedChat != null) {
             getNotificationCenter().removeObserver(this, NotificationCenter.didVerifyMessagesStickers);
         }
@@ -15879,6 +15883,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             } else {
                 allowedReactions = allAvailableReactions;
             }
+        } else if (id == NotificationCenter.errorHappened) {
+            String errorMessage = (String) args[0];
+            Toast.makeText(contentView.getContext(), errorMessage, Toast.LENGTH_LONG).show();
         }
     }
 

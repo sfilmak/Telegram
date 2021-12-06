@@ -2667,16 +2667,15 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         getConnectionsManager().sendRequest(req, (response, error) -> {
             if (response != null) {
                 getMessagesController().processUpdates((TLRPC.Updates) response, false);
-            }
-            /*AndroidUtilities.runOnUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    waitingForVote.remove(key);
-                    if (finishRunnable != null) {
-                        finishRunnable.run();
-                    }
+            } else if (error != null) {
+                if (error.text.equals("PEER_ID_INVALID")) {
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.errorHappened, "Error: Invalid peer"));
+                } else if (error.text.equals("MESSAGE_ID_INVALID")) {
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.errorHappened, "Error: Invalid message"));
+                } else if (error.text.equals("REACTION_INVALID")) {
+                    getMediaDataController().loadAvailableReactions(false, true);
                 }
-            });*/
+            }
         });
     }
 

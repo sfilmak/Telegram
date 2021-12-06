@@ -21,7 +21,6 @@ import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
@@ -9245,6 +9244,12 @@ public class MessagesController extends BaseController implements NotificationCe
                             AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.updateAllowedReactions, reactionsUpdate.reactions.recent_reactons));
                         }
                     }
+                }
+            } else if (error != null) {
+                if (error.text.equals("REACTION_INVALID")) {
+                    getMediaDataController().loadAvailableReactions(false, true);
+                } else if (error.text.equals("CHAT_ADMIN_REQUIRED")) {
+                    AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.errorHappened, "Error: Admin rights required"));
                 }
             }
 
