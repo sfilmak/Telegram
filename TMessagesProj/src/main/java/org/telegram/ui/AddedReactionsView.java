@@ -6,7 +6,6 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -50,6 +49,7 @@ import java.util.stream.Collectors;
 
 public class AddedReactionsView extends FrameLayout {
 
+    private ArrayList<ReactionsCounterSpan> cellsReactions = new ArrayList<>();
     private RecyclerListView.SelectionAdapterReactions mainListAdapter;
 
     public ArrayList<TLRPC.User> allUsersReactions = new ArrayList<>();
@@ -369,6 +369,8 @@ public class AddedReactionsView extends FrameLayout {
                 ReactionsCounterSpan userCell = new ReactionsCounterSpan(parent.getContext());
                 userCell.setLayoutParams(new RecyclerView.LayoutParams(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
 
+                cellsReactions.add(userCell);
+
                 MarginLayoutParams params = (MarginLayoutParams) userCell.getLayoutParams();
                 params.leftMargin = 10;
                 params.topMargin = 10;
@@ -392,6 +394,10 @@ public class AddedReactionsView extends FrameLayout {
         recyclerListView.setAdapter(adapter);
 
         recyclerListView.setOnItemClickListener((view1, position) -> {
+            for(ReactionsCounterSpan cell: cellsReactions) {
+                cell.setSelected(false);
+            }
+
             ReactionsCounterSpan cell = (ReactionsCounterSpan) view1;
             cell.setSelected(true);
 
@@ -409,21 +415,11 @@ public class AddedReactionsView extends FrameLayout {
                     users.add(allUsersReactions.stream().filter(item -> item.id == mess.user_id).findFirst().orElse(null));
                 }
 
-                for (TLRPC.TL_messageUserReaction reaction : newMessages) {
-                    Log.e("DFMDSFM_SFILMAK", reaction.reaction + " | " + reaction.user_id);
-                }
-
-                if(newMessages.size() < cell.getNumberOfReactions()) {
-                    //TODO: load more!
-
+                /*if(newMessages.size() < cell.getNumberOfReactions()) {
                     loadListOfAllReactions(msg_id, dialog_id, getContext(), null, cell.getReaction(), mainListAdapter);
-
-
-                } else {
-                    mainListAdapter.updateListOfItems(users, newMessages);
-
-                    adapter.notifyDataSetChanged();
-                }
+                } else {*/
+                mainListAdapter.updateListOfItems(users, newMessages);
+                //}
             }
         });
 
