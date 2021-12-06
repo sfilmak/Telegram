@@ -72,6 +72,7 @@ public class AddedReactionsView extends FrameLayout {
 
     private boolean isLoadingMoreUsingOffset = false;
     private boolean isLoadedEverything = false;
+    private boolean shouldUseOffset = true;
 
     public AddedReactionsView(@NonNull Context context, int currentAccount, MessageObject messageObject, TLRPC.Chat chat) {
         super(context);
@@ -394,7 +395,7 @@ public class AddedReactionsView extends FrameLayout {
         recyclerListView.setAdapter(adapter);
 
         recyclerListView.setOnItemClickListener((view1, position) -> {
-            for(ReactionsCounterSpan cell: cellsReactions) {
+            for (ReactionsCounterSpan cell : cellsReactions) {
                 cell.setSelected(false);
             }
 
@@ -403,6 +404,8 @@ public class AddedReactionsView extends FrameLayout {
 
             if (cell.getReaction().equals("ALL")) {
                 mainListAdapter.updateListOfItems(allUsersReactions, allMessageUserReactions);
+
+                shouldUseOffset = true;
             } else {
                 ArrayList<TLRPC.TL_messageUserReaction> newMessages = allMessageUserReactions
                         .stream()
@@ -415,11 +418,13 @@ public class AddedReactionsView extends FrameLayout {
                     users.add(allUsersReactions.stream().filter(item -> item.id == mess.user_id).findFirst().orElse(null));
                 }
 
-                /*if(newMessages.size() < cell.getNumberOfReactions()) {
+                if (newMessages.size() < cell.getNumberOfReactions()) {
                     loadListOfAllReactions(msg_id, dialog_id, getContext(), null, cell.getReaction(), mainListAdapter);
-                } else {*/
-                mainListAdapter.updateListOfItems(users, newMessages);
-                //}
+                } else {
+                    mainListAdapter.updateListOfItems(users, newMessages);
+                }
+
+                shouldUseOffset = false;
             }
         });
 
@@ -489,7 +494,7 @@ public class AddedReactionsView extends FrameLayout {
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
 
-                if (!recyclerView.canScrollVertically(1) && !isLoadingMoreUsingOffset && !isLoadedEverything) {
+                if (!recyclerView.canScrollVertically(1) && !isLoadingMoreUsingOffset && !isLoadedEverything && shouldUseOffset) {
                     loadListOfAllReactions(msg_id, dialog_id, getContext(), loadedOffsets.get(loadedOffsets.size() - 1), null, mainListAdapter);
                 }
             }
@@ -583,26 +588,35 @@ public class AddedReactionsView extends FrameLayout {
             if (error == null) {
                 TLRPC.TL_messages_messageReactionsList messageReactionsList = (TLRPC.TL_messages_messageReactionsList) response;
 
-                if (!loadedOffsets.contains(messageReactionsList.next_offset)) {
-                    this.allUsersReactions.addAll(messageReactionsList.users);
-                    this.allMessageUserReactions.addAll(messageReactionsList.reactions);
-                    this.reactionsCount = messageReactionsList.count;
-
-                    if (allMessageUserReactions.size() == reactionsCount) {
-                        isLoadedEverything = true;
-                    } else if ((messageReactionsList.flags & 1) != 0
-                            && messageReactionsList.next_offset != null) {
-                        loadedOffsets.add(messageReactionsList.next_offset);
-                    } else {
-                        isLoadedEverything = true;
+                if(selectedReaction != null) {
+                    if(mainListAdapter != null) {
+                        mainListAdapter.updateListOfItems(messageReactionsList.users, messageReactionsList.reactions);
                     }
+                } else {
+                    if (!loadedOffsets.contains(messageReactionsList.next_offset)) {
+                        this.allUsersReactions.addAll(messageReactionsList.users);
+                        this.allMessageUserReactions.addAll(messageReactionsList.reactions);
+                        this.reactionsCount = messageReactionsList.count;
 
-                    updateView(context);
-                    if (adapter != null) {
-                        adapter.notifyDataSetChanged();
+                        if (allMessageUserReactions.size() == reactionsCount) {
+                            isLoadedEverything = true;
+                        } else if ((messageReactionsList.flags & 1) != 0
+                                && messageReactionsList.next_offset != null) {
+                            loadedOffsets.add(messageReactionsList.next_offset);
+                        } else {
+                            isLoadedEverything = true;
+                        }
+
+                        updateView(context);
+                        /*if (adapter != null) {
+                            adapter.notifyDataSetChanged();
+                        }*/
+                        if(mainListAdapter != null) {
+                            mainListAdapter.updateListOfItems(allUsersReactions, allMessageUserReactions);
+                        }
                     }
+                    isLoadingMoreUsingOffset = false;
                 }
-                isLoadingMoreUsingOffset = false;
             } else {
 
                 updateView(context);
