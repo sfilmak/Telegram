@@ -43,9 +43,14 @@ public class ReactionsCounterSpan extends View {
     private Drawable totalReactionsDrawable;
     private boolean isSelected = false;
     private String reaction = "";
+    private long number_of_reactions = 0;
 
     public void setSelected(boolean isSelected) {
         this.isSelected = isSelected;
+    }
+
+    public long getNumberOfReactions() {
+        return number_of_reactions;
     }
 
     public String getReaction() {
@@ -55,6 +60,7 @@ public class ReactionsCounterSpan extends View {
     public void setReaction(String reaction, TLRPC.Document static_icon, long number_of_reactions, boolean isSelected) {
         this.isSelected = isSelected;
         this.reaction = reaction;
+        this.number_of_reactions = number_of_reactions;
         if (static_icon != null) {
             imageLocation = ImageLocation.getForDocument(static_icon);
             imageReceiver.setImage(imageLocation, "50_50", null, null, null, 1);
@@ -76,7 +82,6 @@ public class ReactionsCounterSpan extends View {
             textWidth = (int) Math.ceil(nameLayout.getLineWidth(0));
             textX = -nameLayout.getLineLeft(0);
         }
-
     }
 
     public ReactionsCounterSpan(Context context) {

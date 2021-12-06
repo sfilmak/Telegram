@@ -6,6 +6,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -49,13 +50,12 @@ import java.util.stream.Collectors;
 
 public class AddedReactionsView extends FrameLayout {
 
+    private RecyclerListView.SelectionAdapterReactions mainListAdapter;
+
     public ArrayList<TLRPC.User> allUsersReactions = new ArrayList<>();
     public ArrayList<TLRPC.TL_messageUserReaction> allMessageUserReactions = new ArrayList<>();
     private int reactionsCount = 0;
     private final ArrayList<String> loadedOffsets = new ArrayList<>();
-
-    public ArrayList<TLRPC.User> filteredUsersReactions = new ArrayList<>();
-    public ArrayList<TLRPC.TL_messageUserReaction> filteredUserReactions = new ArrayList<>();
 
     AvatarsImageView avatarsImageView;
     TextView titleView;
@@ -140,7 +140,6 @@ public class AddedReactionsView extends FrameLayout {
 
                 if (unknownUsers.isEmpty()) {
                     for (int i = 0; i < allPeers.size(); i++) {
-                        //peerIds.add(allPeers.get(i));
                         int finalI = i;
                         if (usersLocal.get(allPeers.get(finalI)) != null) {
                             if (allUsersReactions.stream().noneMatch(o -> o.id == Objects.requireNonNull(usersLocal.get(allPeers.get(finalI))).id)) {
@@ -393,29 +392,39 @@ public class AddedReactionsView extends FrameLayout {
         recyclerListView.setAdapter(adapter);
 
         recyclerListView.setOnItemClickListener((view1, position) -> {
-            TLRPC.TL_messageUserReaction messageUserReaction = allMessageUserReactions.get(position);
             ReactionsCounterSpan cell = (ReactionsCounterSpan) view1;
             cell.setSelected(true);
 
-            if (messageUserReaction == null) {
-                return;
+            if (cell.getReaction().equals("ALL")) {
+                mainListAdapter.updateListOfItems(allUsersReactions, allMessageUserReactions);
+            } else {
+                ArrayList<TLRPC.TL_messageUserReaction> newMessages = allMessageUserReactions
+                        .stream()
+                        .filter(c -> c.reaction.equals(cell.getReaction()))
+                        .collect(Collectors.toCollection(ArrayList::new));
+
+                ArrayList<TLRPC.User> users = new ArrayList<>();
+
+                for (TLRPC.TL_messageUserReaction mess : newMessages) {
+                    users.add(allUsersReactions.stream().filter(item -> item.id == mess.user_id).findFirst().orElse(null));
+                }
+
+                for (TLRPC.TL_messageUserReaction reaction : newMessages) {
+                    Log.e("DFMDSFM_SFILMAK", reaction.reaction + " | " + reaction.user_id);
+                }
+
+                if(newMessages.size() < cell.getNumberOfReactions()) {
+                    //TODO: load more!
+
+                    loadListOfAllReactions(msg_id, dialog_id, getContext(), null, cell.getReaction(), mainListAdapter);
+
+
+                } else {
+                    mainListAdapter.updateListOfItems(users, newMessages);
+
+                    adapter.notifyDataSetChanged();
+                }
             }
-
-            ArrayList<TLRPC.TL_messageUserReaction> customersWithMoreThan100Points = allMessageUserReactions
-                    .stream()
-                    .filter(c -> c.reaction.equals(cell.getReaction()))
-                    .collect(Collectors.toCollection(ArrayList::new));
-
-            ArrayList<TLRPC.User> users = new ArrayList<>();
-
-            for (TLRPC.TL_messageUserReaction mess : customersWithMoreThan100Points) {
-                users.add(allUsersReactions.stream().filter(item -> item.id == mess.user_id).findFirst().orElse(null));
-            }
-
-            this.allMessageUserReactions = customersWithMoreThan100Points;
-            this.allUsersReactions = users;
-
-            adapter.notifyDataSetChanged();
         });
 
         return recyclerListView;
@@ -436,7 +445,21 @@ public class AddedReactionsView extends FrameLayout {
                 }
             }
         });
-        RecyclerListView.SelectionAdapter adapter = new RecyclerListView.SelectionAdapter() {
+        mainListAdapter = new RecyclerListView.SelectionAdapterReactions() {
+
+            public final ArrayList<TLRPC.User> filteredUsersReactions = new ArrayList<>();
+            public final ArrayList<TLRPC.TL_messageUserReaction> filteredMessageReactions = new ArrayList<>();
+
+            public void updateListOfItems(ArrayList<TLRPC.User> filteredUsersReactions, ArrayList<TLRPC.TL_messageUserReaction> filteredMessageReactions) {
+                this.filteredUsersReactions.clear();
+                this.filteredMessageReactions.clear();
+
+                this.filteredUsersReactions.addAll(filteredUsersReactions);
+                this.filteredMessageReactions.addAll(filteredMessageReactions);
+
+                this.notifyDataSetChanged();
+            }
+
             @Override
             public boolean isEnabled(RecyclerView.ViewHolder holder) {
                 return true;
@@ -452,17 +475,17 @@ public class AddedReactionsView extends FrameLayout {
             @Override
             public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
                 UserCell cell = (UserCell) holder.itemView;
-                cell.setUser(allUsersReactions.get(position), allMessageUserReactions.get(position));
+                cell.setUser(filteredUsersReactions.get(position), filteredMessageReactions.get(position));
             }
 
             @Override
             public int getItemCount() {
-                return allUsersReactions.size();
+                return filteredUsersReactions.size();
             }
-
         };
 
-        recyclerListView.setAdapter(adapter);
+        mainListAdapter.updateListOfItems(allUsersReactions, allMessageUserReactions);
+        recyclerListView.setAdapter(mainListAdapter);
 
         recyclerListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 
@@ -471,7 +494,7 @@ public class AddedReactionsView extends FrameLayout {
                 super.onScrolled(recyclerView, dx, dy);
 
                 if (!recyclerView.canScrollVertically(1) && !isLoadingMoreUsingOffset && !isLoadedEverything) {
-                    loadListOfAllReactions(msg_id, dialog_id, getContext(), loadedOffsets.get(loadedOffsets.size() - 1), null, adapter);
+                    loadListOfAllReactions(msg_id, dialog_id, getContext(), loadedOffsets.get(loadedOffsets.size() - 1), null, mainListAdapter);
                 }
             }
         });
@@ -541,7 +564,7 @@ public class AddedReactionsView extends FrameLayout {
         loadListOfAllReactions(messageObject.getId(), messageObject.getDialogId(), context, null, null, null);
     }
 
-    private void loadListOfAllReactions(int messageID, long dialogID, Context context, String lastOffset, String selectedReaction, RecyclerListView.SelectionAdapter adapter) {
+    private void loadListOfAllReactions(int messageID, long dialogID, Context context, String lastOffset, String selectedReaction, RecyclerListView.SelectionAdapterReactions adapter) {
         if (adapter != null) {
             isLoadingMoreUsingOffset = true;
         }
@@ -589,9 +612,5 @@ public class AddedReactionsView extends FrameLayout {
                 updateView(context);
             }
         }));
-    }
-
-    private void loadSelectedReactions() {
-
     }
 }

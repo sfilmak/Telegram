@@ -45,6 +45,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 
 import java.lang.reflect.Field;
@@ -179,6 +180,16 @@ public class RecyclerListView extends RecyclerView {
         public int getSelectionBottomPadding(View view) {
             return 0;
         }
+    }
+
+    public abstract static class SelectionAdapterReactions extends Adapter {
+        public abstract boolean isEnabled(ViewHolder holder);
+
+        public int getSelectionBottomPadding(View view) {
+            return 0;
+        }
+
+        public abstract void updateListOfItems(ArrayList<TLRPC.User> filteredUsersReactions, ArrayList<TLRPC.TL_messageUserReaction> filteredMessageReactions);
     }
 
     public abstract static class FastScrollAdapter extends SelectionAdapter {

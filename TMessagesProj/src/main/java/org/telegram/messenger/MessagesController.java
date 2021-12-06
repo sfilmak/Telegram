@@ -9185,23 +9185,6 @@ public class MessagesController extends BaseController implements NotificationCe
         });
     }
 
-    public void getListOfAllReactionsForAMessage(long chat_peer, int msg_id, int limit) {
-        TLRPC.TL_messages_getMessageReactionsList req = new TLRPC.TL_messages_getMessageReactionsList();
-        req.peer = getInputPeer(chat_peer);
-        req.id = msg_id;
-        req.limit = limit;
-
-        getConnectionsManager().sendRequest(req, (response, error) -> {
-            if(response instanceof TLRPC.TL_messages_messageReactionsList) {
-                TLRPC.TL_messages_messageReactionsList res = (TLRPC.TL_messages_messageReactionsList) response;
-
-                AndroidUtilities.runOnUIThread(() -> {
-                    getNotificationCenter().postNotificationName(NotificationCenter.didUpdateReactions, chat_peer, msg_id, res.reactions);
-                });
-            }
-        });
-    }
-
     public void setReactionToMessage(long chat_peer, int msg_id, String reaction, boolean removeReaction) {
         TLRPC.TL_messages_sendReaction req = new TLRPC.TL_messages_sendReaction();
         req.peer = getInputPeer(chat_peer);
