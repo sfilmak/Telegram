@@ -157,6 +157,7 @@ android {
             debuggable false
             jniDebuggable false
             signingConfig signingConfigs.release
+            applicationIdSuffix ".sfilmak.r2"
             minifyEnabled true
             shrinkResources false
             multiDexEnabled true

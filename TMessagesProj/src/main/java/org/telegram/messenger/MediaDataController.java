@@ -191,6 +191,11 @@ public class MediaDataController extends BaseController {
     private boolean loadingFeaturedStickers;
     private boolean featuredStickersLoaded;
 
+    private ArrayList<TLRPC.TL_availableReaction> availableReactions = new ArrayList<>();
+    private int loadAvailableReactionsHash;
+    private int loadAvailableReactionsDate;
+    private boolean loadingAvailableReactions;
+
     private TLRPC.Document greetingsSticker;
 
     public void cleanup() {
@@ -215,6 +220,7 @@ public class MediaDataController extends BaseController {
         featuredStickerSetsById.clear();
         featuredStickerSets.clear();
         unreadStickerSets.clear();
+        availableReactions.clear();
         recentGifs.clear();
         stickerSetsById.clear();
         installedStickerSetsById.clear();
@@ -224,6 +230,9 @@ public class MediaDataController extends BaseController {
         loadingDiceStickerSets.clear();
         loadingFeaturedStickers = false;
         featuredStickersLoaded = false;
+        loadAvailableReactionsHash = 0;
+        loadAvailableReactionsDate = 0;
+        loadingAvailableReactions = false;
         loadingRecentGifs = false;
         recentGifsLoaded = false;
 
@@ -264,6 +273,13 @@ public class MediaDataController extends BaseController {
     public void checkFeaturedStickers() {
         if (!loadingFeaturedStickers && (!featuredStickersLoaded || Math.abs(System.currentTimeMillis() / 1000 - loadFeaturedDate) >= 60 * 60)) {
             loadFeaturedStickers(true, false);
+        }
+    }
+
+    public void checkAvailableReactions() {
+        //Update every 3600 seconds
+        if (!loadingAvailableReactions && (Math.abs(System.currentTimeMillis() / 1000 - loadAvailableReactionsDate) >= 60 * 60)) {
+            loadAvailableReactions(true, false);
         }
     }
 
@@ -672,6 +688,10 @@ public class MediaDataController extends BaseController {
         return featuredStickerSets;
     }
 
+    public ArrayList<TLRPC.TL_availableReaction> getAvailableReactions() {
+        return availableReactions;
+    }
+
     public ArrayList<Long> getUnreadStickerSets() {
         return unreadStickerSets;
     }
@@ -1054,6 +1074,134 @@ public class MediaDataController extends BaseController {
         loadStickers(type, false, true);
     }
 
+    public void loadAvailableReactions(boolean cache, boolean force) {
+        if (loadingAvailableReactions) {
+            return;
+        }
+        loadingAvailableReactions = true;
+        if (cache) {
+            getMessagesStorage().getStorageQueue().postRunnable(() -> {
+                ArrayList<TLRPC.TL_availableReaction> newReactionArray = null;
+                int date = 0;
+                long hash = 0;
+                SQLiteCursor cursor = null;
+                try {
+                    cursor = getMessagesStorage().getDatabase().queryFinalized("SELECT data, date, hash FROM available_reactions WHERE 1");
+                    if (cursor.next()) {
+                        NativeByteBuffer data = cursor.byteBufferValue(0);
+                        if (data != null) {
+                            newReactionArray = new ArrayList<>();
+                            int count = data.readInt32(false);
+                            for (int a = 0; a < count; a++) {
+                                TLRPC.TL_availableReaction availableReaction = TLRPC.TL_availableReaction.TLdeserialize(data, data.readInt32(false), false);
+                                newReactionArray.add(availableReaction);
+                            }
+                            data.reuse();
+                        }
+                        date = cursor.intValue(1);
+                        hash = calcAvailableReactionsHash(newReactionArray);
+                    }
+                } catch (Throwable e) {
+                FileLog.e(e);
+            } finally {
+                if (cursor != null) {
+                    cursor.dispose();
+                }
+            }
+                processLoadedAvailableReactions(newReactionArray, true, date, (int) hash);
+            });
+        } else {
+            TLRPC.TL_messages_getAvailableReactions req = new TLRPC.TL_messages_getAvailableReactions();
+            req.hash = force ? 0 : loadAvailableReactionsHash;
+            getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+                if (response instanceof TLRPC.TL_messages_availableReactions) {
+                    TLRPC.TL_messages_availableReactions res = (TLRPC.TL_messages_availableReactions) response;
+                    processLoadedAvailableReactions(res.reactions, false, (int) (System.currentTimeMillis() / 1000), res.hash);
+                } else {
+                    processLoadedAvailableReactions(null, false, (int) (System.currentTimeMillis() / 1000), req.hash);
+                }
+            }));
+        }
+    }
+
+    private void processLoadedAvailableReactions(ArrayList<TLRPC.TL_availableReaction> res, boolean cache, int date, int hash) {
+        AndroidUtilities.runOnUIThread(() -> {
+            loadingAvailableReactions = false;
+        });
+        Utilities.stageQueue.postRunnable(() -> {
+            if (cache && (res == null || Math.abs(System.currentTimeMillis() / 1000 - date) >= 60 * 60) || !cache && res == null && hash == 0) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (res != null && hash != 0) {
+                        loadAvailableReactionsHash = hash;
+                    }
+                    loadAvailableReactions(false, false);
+                }, res == null && !cache ? 1000 : 0);
+                if (res == null) {
+                    return;
+                }
+            }
+            if (res != null) {
+                try {
+                    ArrayList<TLRPC.TL_availableReaction> availableReactionsNew = new ArrayList<>();
+                    for (int a = 0; a < res.size(); a++) {
+                        TLRPC.TL_availableReaction availableReaction = res.get(a);
+                        availableReactionsNew.add(availableReaction);
+                    }
+                    if (!cache) {
+                        putAvailableReactionsToCache(availableReactionsNew, date, hash);
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        availableReactions = availableReactionsNew;
+                        loadAvailableReactionsHash = hash;
+                        loadAvailableReactionsDate = date;
+                        getNotificationCenter().postNotificationName(NotificationCenter.availableReactionsDidLoad);
+                    });
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            } else {
+                AndroidUtilities.runOnUIThread(() -> loadAvailableReactionsDate = date);
+                putAvailableReactionsToCache(null, date, 0);
+            }
+        });
+    }
+
+    private void putAvailableReactionsToCache(ArrayList<TLRPC.TL_availableReaction> availableReactions, int date, long hash) {
+        ArrayList<TLRPC.TL_availableReaction> reactionsFinal = availableReactions != null ? new ArrayList<>(availableReactions) : null;
+        getMessagesStorage().getStorageQueue().postRunnable(() -> {
+            try {
+                if (reactionsFinal != null) {
+                    SQLitePreparedStatement state = getMessagesStorage().getDatabase().executeFast("REPLACE INTO available_reactions VALUES(?, ?, ?, ?)");
+                    state.requery();
+                    int size = 3;
+                    for (int a = 0; a < reactionsFinal.size(); a++) {
+                        size += reactionsFinal.get(a).getObjectSize();
+                    }
+                    NativeByteBuffer data = new NativeByteBuffer(size);
+                    data.writeInt32(reactionsFinal.size());
+                    for (int a = 0; a < reactionsFinal.size(); a++) {
+                        reactionsFinal.get(a).serializeToStream(data);
+                    }
+                    state.bindInteger(1, 1);
+                    state.bindByteBuffer(2, data);
+                    state.bindInteger(3, date);
+                    state.bindLong(4, hash);
+                    state.step();
+                    data.reuse();
+                    state.dispose();
+                } else {
+                    SQLitePreparedStatement state = getMessagesStorage().getDatabase().executeFast("UPDATE available_reactions SET date = ?");
+                    state.requery();
+                    state.bindInteger(1, date);
+                    state.step();
+                    state.dispose();
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
     public void loadFeaturedStickers(boolean cache, boolean force) {
         if (loadingFeaturedStickers) {
             return;
@@ -1204,6 +1352,18 @@ public class MediaDataController extends BaseController {
                 FileLog.e(e);
             }
         });
+    }
+
+    private long calcAvailableReactionsHash(ArrayList<TLRPC.TL_availableReaction> sets) {
+        if (sets == null || sets.isEmpty()) {
+            return 0;
+        }
+        long acc = 0;
+        for (int a = 0; a < sets.size(); a++) {
+            String set = sets.get(a).reaction;
+            acc = calcHash(acc, set.hashCode());
+        }
+        return acc;
     }
 
     private long calcFeaturedStickersHash(ArrayList<TLRPC.StickerSetCovered> sets) {

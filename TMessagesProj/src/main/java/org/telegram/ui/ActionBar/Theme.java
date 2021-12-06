@@ -2711,6 +2711,9 @@ public class Theme {
     public static Drawable profile_verifiedDrawable;
     public static Drawable profile_verifiedCheckDrawable;
 
+    public static Paint chat_selectedReactionRectPaint;
+    public static Paint chat_selectedReactionRectPaint2;
+
     public static Paint chat_docBackPaint;
     public static Paint chat_deleteProgressPaint;
     public static Paint chat_botProgressPaint;
@@ -3018,6 +3021,7 @@ public class Theme {
 
     public static final String key_avatar_text = "avatar_text";
     public static final String key_avatar_backgroundSaved = "avatar_backgroundSaved";
+    public static final String key_avatar_backgroundReactionsBackground = "avatar_reactionsBack";
     public static final String key_avatar_backgroundArchived = "avatar_backgroundArchived";
     public static final String key_avatar_backgroundArchivedHidden = "avatar_backgroundArchivedHidden";
     public static final String key_avatar_backgroundRed = "avatar_backgroundRed";
@@ -3875,6 +3879,7 @@ public class Theme {
         defaultColors.put(key_avatar_text, 0xffffffff);
 
         defaultColors.put(key_avatar_backgroundSaved, 0xff66bffa);
+        defaultColors.put(key_avatar_backgroundReactionsBackground, 0xffebf3fa);
         defaultColors.put(key_avatar_backgroundArchived, 0xffa9b6c1);
         defaultColors.put(key_avatar_backgroundArchivedHidden, 0xff66bffa);
         defaultColors.put(key_avatar_backgroundRed, 0xffe56555);
@@ -8190,6 +8195,14 @@ public class Theme {
             chat_replyTextPaint = new TextPaint(TextPaint.ANTI_ALIAS_FLAG);
             chat_instantViewPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             chat_instantViewPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            chat_selectedReactionRectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            chat_selectedReactionRectPaint.setStyle(Paint.Style.STROKE);
+            chat_selectedReactionRectPaint.setStrokeCap(Paint.Cap.ROUND);
+
+            chat_selectedReactionRectPaint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
+            chat_selectedReactionRectPaint2.setStyle(Paint.Style.STROKE);
+            chat_selectedReactionRectPaint2.setStrokeCap(Paint.Cap.ROUND);
+
             chat_instantViewRectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             chat_instantViewRectPaint.setStyle(Paint.Style.STROKE);
             chat_instantViewRectPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -8547,6 +8560,12 @@ public class Theme {
             chat_contextResult_descriptionTextPaint.setTextSize(AndroidUtilities.dp(13));
             chat_radialProgressPaint.setStrokeWidth(AndroidUtilities.dp(3));
             chat_radialProgress2Paint.setStrokeWidth(AndroidUtilities.dp(2));
+
+            chat_selectedReactionRectPaint.setStrokeWidth(AndroidUtilities.dp(1.5f));
+            chat_selectedReactionRectPaint.setColor(MSG_OUT_COLOR_WHITE);
+
+            chat_selectedReactionRectPaint2.setStrokeWidth(AndroidUtilities.dp(2f));
+            chat_selectedReactionRectPaint2.setColor(0xff66bffa);
         }
     }
 
